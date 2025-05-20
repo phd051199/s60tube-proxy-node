@@ -14,7 +14,7 @@ export async function storeHandler(c: Context) {
       return c.json({ error: "Missing key parameter" }, 400);
     }
 
-    kvStore.set(data.key, data.value);
+    await kvStore.set(data.key, data.value);
 
     return c.json(
       {
@@ -22,7 +22,7 @@ export async function storeHandler(c: Context) {
         key: data.key,
         value: data.value,
       },
-      200
+      200,
     );
   } catch (error) {
     console.error("KV Store error:", error);

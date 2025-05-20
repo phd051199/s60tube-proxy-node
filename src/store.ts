@@ -1,48 +1,56 @@
-interface StoreEntry<T> {
-  value: T;
-  expiresAt: number;
-}
+import Redis from "ioredis";
 
 class Store<T = unknown> {
-  private store = new Map<string, StoreEntry<T>>();
+  private redis: Redis;
   private readonly DEFAULT_TTL_MS = 86400 * 1000; // 24 hours
 
-  set(key: string, value: T, ttlMs = this.DEFAULT_TTL_MS): void {
-    this.store.set(key, {
-      value,
-      expiresAt: Date.now() + ttlMs,
+  constructor() {
+    this.redis = new Redis({
+      path: "/home/bmrknhtf/redis.sock",
+      password: "ar0Dt3x7Iq",
     });
   }
 
-  get(key: string): T | undefined {
-    const entry = this.store.get(key);
-    const now = Date.now();
+  async set(key: string, value: T, ttlMs = this.DEFAULT_TTL_MS): Promise<void> {
+    const serialized = JSON.stringify(value);
+    await this.redis.set(key, serialized, "PX", ttlMs);
+  }
 
-    if (!entry || entry.expiresAt < now) {
-      if (entry) {
-        this.store.delete(key);
-      }
+  async get(key: string): Promise<T | undefined> {
+    const serialized = await this.redis.get(key);
+
+    if (!serialized) {
       return undefined;
     }
 
-    return entry.value;
+    try {
+      return JSON.parse(serialized) as T;
+    } catch (error) {
+      console.error(`Failed to parse Redis value for key: ${key}`, error);
+      return undefined;
+    }
   }
 
-  has(key: string): boolean {
-    const entry = this.store.get(key);
-    return !!entry && entry.expiresAt >= Date.now();
+  async has(key: string): Promise<boolean> {
+    const exists = await this.redis.exists(key);
+    return exists === 1;
   }
 
-  delete(key: string): boolean {
-    return this.store.delete(key);
+  async delete(key: string): Promise<boolean> {
+    const result = await this.redis.del(key);
+    return result === 1;
   }
 
-  clear(): void {
-    this.store.clear();
+  async clear(): Promise<void> {
+    await this.redis.flushdb();
   }
 
-  size(): number {
-    return this.store.size;
+  async size(): Promise<number> {
+    return await this.redis.dbsize();
+  }
+
+  async disconnect(): Promise<void> {
+    await this.redis.quit();
   }
 }
 
