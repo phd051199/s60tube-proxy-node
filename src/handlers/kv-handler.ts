@@ -1,5 +1,5 @@
 import { Context } from "hono";
-import { kvStore } from "../utils/store";
+import { kvStore } from "../store";
 
 interface StoreRequest {
   key: string;
@@ -8,7 +8,7 @@ interface StoreRequest {
 
 export async function storeHandler(c: Context) {
   try {
-    const data = await c.req.json() as StoreRequest;
+    const data = (await c.req.json()) as StoreRequest;
 
     if (!data.key) {
       return c.json({ error: "Missing key parameter" }, 400);
@@ -22,7 +22,7 @@ export async function storeHandler(c: Context) {
         key: data.key,
         value: data.value,
       },
-      200,
+      200
     );
   } catch (error) {
     console.error("KV Store error:", error);

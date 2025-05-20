@@ -2,7 +2,7 @@
   "name": "proxy-new",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "ncc build src/index.ts --minify",
     "start": "node dist/index.js"
   },
   "dependencies": {
@@ -11,6 +11,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.17",
+    "@vercel/ncc": "^0.38.3",
     "tsx": "^4.7.1",
     "typescript": "^5.8.3"
   }
