@@ -8,7 +8,7 @@ export async function videoPlaybackHandler(c: Context) {
     return c.json({ error: "Missing video parameter" }, 400);
   }
 
-  const value = await kvStore.get(v);
+  const value = kvStore.get(v);
   if (!value) {
     return c.json({ error: "Video not found" }, 404);
   }

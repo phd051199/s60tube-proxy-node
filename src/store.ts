@@ -1,56 +1,39 @@
-import Redis from "ioredis";
-
 class Store<T = unknown> {
-  private redis: Redis;
+  private store = new Map<string, { value: T; expiresAt: number }>();
   private readonly DEFAULT_TTL_MS = 86400 * 1000; // 24 hours
 
-  constructor() {
-    this.redis = new Redis({
-      path: "/home/bmrknhtf/redis.sock",
-      password: "ar0Dt3x7Iq",
-    });
+  constructor() {}
+
+  set(key: string, value: T, ttlMs = this.DEFAULT_TTL_MS) {
+    const expiresAt = Date.now() + ttlMs;
+    this.store.set(key, { value, expiresAt });
   }
 
-  async set(key: string, value: T, ttlMs = this.DEFAULT_TTL_MS): Promise<void> {
-    const serialized = JSON.stringify(value);
-    await this.redis.set(key, serialized, "PX", ttlMs);
-  }
+  get(key: string) {
+    const entry = this.store.get(key);
 
-  async get(key: string): Promise<T | undefined> {
-    const serialized = await this.redis.get(key);
+    if (!entry) return undefined;
 
-    if (!serialized) {
+    if (Date.now() > entry.expiresAt) {
+      this.store.delete(key);
       return undefined;
     }
 
-    try {
-      return JSON.parse(serialized) as T;
-    } catch (error) {
-      console.error(`Failed to parse Redis value for key: ${key}`, error);
-      return undefined;
+    return entry.value;
+  }
+
+  has(key: string) {
+    const entry = this.store.get(key);
+    if (!entry) return false;
+    if (Date.now() > entry.expiresAt) {
+      this.store.delete(key);
+      return false;
     }
+    return true;
   }
 
-  async has(key: string): Promise<boolean> {
-    const exists = await this.redis.exists(key);
-    return exists === 1;
-  }
-
-  async delete(key: string): Promise<boolean> {
-    const result = await this.redis.del(key);
-    return result === 1;
-  }
-
-  async clear(): Promise<void> {
-    await this.redis.flushdb();
-  }
-
-  async size(): Promise<number> {
-    return await this.redis.dbsize();
-  }
-
-  async disconnect(): Promise<void> {
-    await this.redis.quit();
+  delete(key: string) {
+    return this.store.delete(key);
   }
 }
 

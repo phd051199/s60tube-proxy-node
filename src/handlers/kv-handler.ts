@@ -6,7 +6,7 @@ interface StoreRequest {
   value: string;
 }
 
-export async function storeHandler(c: Context) {
+export async function createHandler(c: Context) {
   try {
     const data = (await c.req.json()) as StoreRequest;
 
@@ -14,7 +14,7 @@ export async function storeHandler(c: Context) {
       return c.json({ error: "Missing key parameter" }, 400);
     }
 
-    await kvStore.set(data.key, data.value);
+    kvStore.set(data.key, data.value);
 
     return c.json(
       {
@@ -24,6 +24,23 @@ export async function storeHandler(c: Context) {
       },
       200,
     );
+  } catch (error) {
+    console.error("KV Store error:", error);
+    throw error;
+  }
+}
+
+export async function readHandler(c: Context) {
+  const key = c.req.param("key");
+
+  try {
+    const value = kvStore.get(key);
+
+    if (!value) {
+      return c.json({ error: "Key not found" }, 404);
+    }
+
+    return c.json(value);
   } catch (error) {
     console.error("KV Store error:", error);
     throw error;
